@@ -1,6 +1,6 @@
 # Exercise 1 : TiDB Cluster Installation
 
-## Course Overview
+## Exercise Overview
 In this exercise, we will walk through all installation steps to make sure that your workstation can successfully run TiDB clusters.  This workshop expects you to use 2 TiDB servers on port 4000 and 4001, 3 placement driver servers, 3 TiKV storages, and 1 TiFlash storage.
 
 ## Prerequisite
@@ -137,4 +137,22 @@ Store: tikv
 1 row in set (0.00 sec)
 ```
 
-9. (Optional) 
+9. (_Optional_) After the use of TiDB server clusters, we can terminate and clean it up to release the resources used. On the terminal screen that running the TiDB server cluster service (as you may see below), press `ctrl-c` to terminate the service.
+
+```console
+Connect TiDB:   mysql --comments --host 127.0.0.1 --port 4000 -u root
+Connect TiDB:   mysql --comments --host 127.0.0.1 --port 4001 -u root
+TiDB Dashboard: http://127.0.0.1:2379/dashboard
+Grafana:        http://127.0.0.1:3000
+
+...
+tikv quit
+Wait pd(84779) to quit...
+```
+
+10. (_Optional_) You may also clean up all the playground files that relate to our workshop by using the following command:
+
+```console
+$ ~/.tiup/bin/tiup clean classroom
+Clean instance of `playground`, directory: /Users/username/.tiup/data/classroom
+```
