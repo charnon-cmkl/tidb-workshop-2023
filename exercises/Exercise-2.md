@@ -161,7 +161,7 @@ Bye
 9. Now, we will try to import the mock data from the given CSV file using the TiUP lightning, which is a tool that handles data importing tasks. In order to use the TiUP lightning tool, we have to prepare a configuration file (`.toml`) as follows.
 
 ```console
-$ cat ex2-hrd-table-import.toml
+tidb:4000> SYSTEM cat ex2-hrd-table-import.toml
 
 [lightning]
 # Log
@@ -204,10 +204,44 @@ status-port = 10080
 pd-addr = "127.0.0.1:2379"
 ```
 
-10. Then, execute the TiUP lightning utility to import the mock data from the CSV file into the TiDB database using the following command.
+10. Before we execute the data importing task with TiUP Lightning, we have to truncate all imported mock data from the `Employee` table. Using the following command, the database will truncate the existing `Employee` table.
+
+```sql
+tidb:4000> TRUNCATE Employee;   
+```
+
+11. Then, execute the TiUP lightning utility to import the mock data from the CSV file into the TiDB database using the following command.
 
 ```console
 $ tiup tidb-lightning:v6.5.1 --config ./misc/ex2-hrd-table-import.toml
 ...
++---+--------------------------------------------------------------+-------------+--------+
+| # | CHECK ITEM                                                   | TYPE        | PASSED |
++---+--------------------------------------------------------------+-------------+--------+
+| 1 | Skip the csv size check, because config.StrictFormat is true | performance | true   |
++---+--------------------------------------------------------------+-------------+--------+
+| 2 | the checkpoints are valid                                    | critical    | true   |
++---+--------------------------------------------------------------+-------------+--------+
+| 3 | Cluster version check passed                                 | critical    | true   |
++---+--------------------------------------------------------------+-------------+--------+
+| 4 | Lightning has the correct storage permission                 | critical    | true   |
++---+--------------------------------------------------------------+-------------+--------+
 
+tidb lightning exit successfully
+```
+
+12. Now, we can check the result of the data importing task by using the following command.
+
+```sql
+tidb:4000> SELECT COUNT(*) FROM Employee;
+--------------
+SELECT COUNT(*) FROM Employee
+--------------
+
++----------+
+| COUNT(*) |
++----------+
+|      311 |
++----------+
+1 row in set (0.01 sec)
 ```
