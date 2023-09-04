@@ -1,7 +1,7 @@
-# Exercise 3 : Flashback Table and AUTO_RANDOM constraints
+# Exercise 3 : Flashback Operation and AUTO_RANDOM attribute
 
 ## Exercise Overview
-In this exercise, we will introduce some features of TiDB server that allow users to flashback data tables/queries when discarding some modifications and set data sharding based on random primary key with `AUTO_RANDOM` constraint.
+In this exercise, we will introduce some features of TiDB server that allow users to flashback data tables/queries when discarding some modifications and set data sharding based on random primary key with the `AUTO_RANDOM` attribute.
 
 ## Prerequisites
 * Your workstation must run a linux-based operating system (MacOS or Linux).
@@ -9,7 +9,7 @@ In this exercise, we will introduce some features of TiDB server that allow user
 * Your workstation must be installed with MySQL command line interface and be able to execute SQL commands.
 
 ## Instruction
-1. Create a test table with the `AUTO_RANDOM` constraint and populate a set of test data. Then, check how it generates records randomly.
+1. Create a test table with the `AUTO_RANDOM` atttribute and populate a set of test data. Then, check how it generates records randomly.
 2. Perform an update to the table and attempt to retrieve the previous version with the `flashback` command.
 3. Perform timely queries with the `AS OF` statement to flashback a query and check the results.
 
@@ -22,7 +22,7 @@ $ ./connect-4000.sh
 tidb:4000>
 ```
 
-2. Review and make sure that you understand the SQL command to create a test table with the `AUTO_RANDOM` constraint.
+2. Review and make sure that you understand the SQL command to create a test table with the `AUTO_RANDOM` attribute.
 
 ```sql
 tidb:4000> SYSTEM cat ex2-sales-table-create.sql
@@ -202,4 +202,107 @@ SELECT ID, Buyer_Name, Product_Name FROM Sales_backup
 | 8935141660703064066 | Wang, Charlie   | Hair Shampoo |
 +---------------------+-----------------+--------------+
 3 rows in set (0.01 sec)
+```
+
+6. Then, we can try using the `FLASHBACK` operation on the query. We prepare a query to enquire a collection of data records from the `Sales_backup` table before modifying some records. We will use the `AS OF` statement to make the TiDB server retrieve the data record before the modification. Let's check and make sure we understand the script correctly.
+
+```sql
+tidb:4000> SYSTEM cat ex3-sales-table-fb-query.sql
+
+USE Workshop;
+
+SELECT ID, Buyer_Name, Product_Name, 'Current Data' FROM Sales_backup;
+
+SELECT SLEEP(5);
+
+UPDATE Sales_backup SET Buyer_Name = "Angelina, Christ" WHERE ID = 1729382256910270467;
+
+SELECT ID, Buyer_Name, 'Updated Data' FROM Sales_backup;
+
+SELECT ID, Buyer_Name, 'Past Data' FROM Sales_backup AS OF TIMESTAMP(CURRENT_TIMESTAMP() - INTERVAL '3' MINUTE);
+
+SELECT NOW(),
+    VARIABLE_VALUE
+FROM mysql.tidb
+WHERE variable_name = "tikv_gc_safe_point";
+```
+You may see that we first check the data record in the `Sales_backup` table and wait for 5 seconds before updating the buyer name of the record ID = `1729382256910270467`. Then, we use a `SELECT` query to validate the updated data record. Now, we use the `AS OF` statement with the `TIMESTAMP` command in another `SELECT` query with the intention to fetch the data as of 5 minutes agos.
+Lastly, we check the scope of flashback operation before the deletion of the garbage collection.
+
+7. We execute the SQL script to use the flashback operation and see the results.
+
+```sql
+tidb:4000> SOURCE ex3-sales-table-fb-query.sql
+
+Database changed
+--------------
+SELECT ID, Buyer_Name, Product_Name, 'Current Data' FROM Sales_backup
+--------------
+
++---------------------+-----------------+--------------+--------------+
+| ID                  | Buyer_Name      | Product_Name | Current Data |
++---------------------+-----------------+--------------+--------------+
+| 1729382256910270467 | Barbara, Thomas | Body Soap    | Current Data |
+| 2594073385365405697 | Barbara, Thomas | Cornflakes   | Current Data |
+| 8935141660703064066 | Wang, Charlie   | Hair Shampoo | Current Data |
++---------------------+-----------------+--------------+--------------+
+3 rows in set (0.00 sec)
+
+--------------
+SELECT SLEEP(5)
+--------------
+
++----------+
+| SLEEP(5) |
++----------+
+|        0 |
++----------+
+1 row in set (5.00 sec)
+
+--------------
+UPDATE Sales_backup SET Buyer_Name = "Angelina, Christ" WHERE ID = 1729382256910270467
+--------------
+
+Query OK, 1 row affected (0.08 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+--------------
+SELECT ID, Buyer_Name, 'Updated Data' FROM Sales_backup
+--------------
+
++---------------------+------------------+--------------+
+| ID                  | Buyer_Name       | Updated Data |
++---------------------+------------------+--------------+
+| 1729382256910270467 | Angelina, Christ | Updated Data |
+| 2594073385365405697 | Barbara, Thomas  | Updated Data |
+| 8935141660703064066 | Wang, Charlie    | Updated Data |
++---------------------+------------------+--------------+
+3 rows in set (0.00 sec)
+
+--------------
+SELECT ID, Buyer_Name, 'Past Data' FROM Sales_backup AS OF TIMESTAMP(CURRENT_TIMESTAMP() - INTERVAL '3' MINUTE)
+--------------
+
++---------------------+-----------------+-----------+
+| ID                  | Buyer_Name      | Past Data |
++---------------------+-----------------+-----------+
+| 1729382256910270467 | Barbara, Thomas | Past Data |
+| 2594073385365405697 | Barbara, Thomas | Past Data |
+| 8935141660703064066 | Wang, Charlie   | Past Data |
++---------------------+-----------------+-----------+
+3 rows in set (0.00 sec)
+
+--------------
+SELECT NOW(),
+    VARIABLE_VALUE
+FROM mysql.tidb
+WHERE variable_name = "tikv_gc_safe_point"
+--------------
+
++---------------------+-----------------------------+
+| NOW()               | VARIABLE_VALUE              |
++---------------------+-----------------------------+
+| 2023-09-04 11:43:54 | 20230904-11:32:17.648 +0700 |
++---------------------+-----------------------------+
+1 row in set (0.00 sec)
 ```
