@@ -14,8 +14,8 @@ applications.
 **Course Date & Time:** September 13, 2023 | 9:00~17:00
 
 **Course Instructor:**
-* Dr.Akkarit Sangpetch, email: <akkarit@cmkl.ac.th>
-* Dr.Charnon Pattiyanon, email: <charnon@cmkl.ac.th>
+* Dr.Akkarit Sangpetch
+* Dr.Charnon Pattiyanon
 
 **Course Objectives:**
 * Understand overview of HTAP database Architecture
